@@ -50,7 +50,7 @@ export function BookingForm({ selectedRoom, onBack }) {
 
     // NOTE: Replace these with your actual EmailJS IDs and Keys!
     emailjs.send(
-      'service_x02nmf9',
+      'service_8yeyrwd',
       'template_6w6ox5i',
       templateParams,
       'H2wCMESMkzRAYi5A8'
