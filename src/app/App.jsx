@@ -25,6 +25,18 @@ export default function App() {
   const isAdmin = user?.email === 'bikjha2007@gmail.com';
 
   useEffect(() => {
+    const fetchDatabaseData = async () => {
+      const { data: roomsData } = await supabase.from('rooms').select('*');
+      if (roomsData) setRooms(roomsData);
+
+      const { data: bookingsData } = await supabase.from('bookings').select('*');
+      if (bookingsData) setBookings(bookingsData);
+
+      const { data: complaintsData } = await supabase.from('complaints').select('*');
+      if (complaintsData) setComplaints(complaintsData);
+    };
+
+    fetchDatabaseData();
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -43,13 +55,47 @@ export default function App() {
     setCurrentView('home');
   };
 
-  const handleBookingComplete = (studentData) => {
+  const handleBookingComplete = async (studentData) => {
     setBookedStudent(studentData);
     setCurrentView('services');
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([{
+        id: studentData.bookingRef,
+        guest_name: `${studentData.firstName} ${studentData.lastName}`,
+        room_name: studentData.roomName,
+        check_in: studentData.checkIn,
+        status: 'confirmed'
+      }])
+      .select();
+      
+    if (data && data.length > 0) {
+      setBookings([...bookings, data[0]]);
+    } else if (error) {
+      console.error('Error saving booking:', error);
+    }
   };
 
-  const handleAddComplaint = (complaint) => {
-    setComplaints([...complaints, complaint]);
+  const handleAddComplaint = async (complaint) => {
+    const { data, error } = await supabase
+      .from('complaints')
+      .insert([{
+        date: complaint.date,
+        type: complaint.type,
+        room_no: complaint.roomNo,
+        usn: complaint.usn,
+        category: complaint.category,
+        context: complaint.context,
+        email: complaint.email
+      }])
+      .select();
+
+    if (data && data.length > 0) {
+      setComplaints([...complaints, data[0]]);
+    } else if (error) {
+      console.error('Error saving complaint:', error);
+    }
   };
 
   const handleViewChange = (view) => {
@@ -74,12 +120,37 @@ export default function App() {
     setCurrentView('bookings');
   };
 
-  const handleAddRoom = (room) => {
-    setRooms([...rooms, room]);
+  const handleAddRoom = async (room) => {
+    const { data, error } = await supabase
+      .from('rooms')
+      .insert([{
+        name: room.name,
+        type: room.type,
+        capacity: parseInt(room.capacity),
+        beds: parseInt(room.beds),
+        price: parseFloat(room.price),
+        amenities: room.amenities
+      }])
+      .select();
+
+    if (data && data.length > 0) {
+      setRooms([...rooms, data[0]]);
+    } else if (error) {
+      console.error('Error adding room:', error);
+    }
   };
 
-  const handleDeleteRoom = (id) => {
-    setRooms(rooms.filter(room => room.id !== id));
+  const handleDeleteRoom = async (id) => {
+    const { error } = await supabase
+      .from('rooms')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setRooms(rooms.filter(room => room.id !== id));
+    } else {
+      console.error('Error deleting room:', error);
+    }
   };
 
   // If the student has booked and is on the services page, show the dashboard
