@@ -3,7 +3,7 @@ import { Calendar, Users, DollarSign, Bed, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 
-export function Admin({ rooms, bookings, onAddRoom, onDeleteRoom }) {
+export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoom }) {
   const [activeTab, setActiveTab] = useState('rooms');
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: '', type: 'Shared', capacity: 1, beds: 1, price: 0, amenities: '' });
@@ -31,9 +31,9 @@ export function Admin({ rooms, bookings, onAddRoom, onDeleteRoom }) {
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Admin Dashboard</h1>
-        <div className="flex gap-2 bg-muted/50 backdrop-blur-lg rounded-xl p-1">
-          {['dashboard', 'bookings', 'rooms'].map((tab) => (
-            <motion.button key={tab} onClick={() => setActiveTab(tab)} className={`relative px-4 py-2 rounded-lg capitalize transition-colors ${activeTab === tab ? '' : 'hover:bg-background/50'}`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <div className="flex gap-2 bg-muted/50 backdrop-blur-lg rounded-xl p-1 overflow-x-auto max-w-full">
+          {['dashboard', 'bookings', 'rooms', 'complaints'].map((tab) => (
+            <motion.button key={tab} onClick={() => setActiveTab(tab)} className={`relative px-4 py-2 rounded-lg capitalize transition-colors flex-shrink-0 ${activeTab === tab ? '' : 'hover:bg-background/50'}`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               {activeTab === tab && (<motion.div layoutId="activeTab" className="absolute inset-0 bg-background shadow-lg rounded-lg" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />)}
               <span className="relative z-10">{tab}</span>
             </motion.button>
@@ -158,6 +158,48 @@ export function Admin({ rooms, bookings, onAddRoom, onDeleteRoom }) {
                 ))}
               </div>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === 'complaints' && (
+          <motion.div key="complaints" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <GlassCard className="overflow-hidden">
+              {complaints.length === 0 ? (
+                <div className="p-12 text-center">
+                  <h3 className="mb-2">No Complaints or Feedback</h3>
+                  <p className="text-muted-foreground">Everything seems to be running smoothly.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-4">Date</th>
+                        <th className="text-left p-4">Type</th>
+                        <th className="text-left p-4">Room / USN</th>
+                        <th className="text-left p-4">Category</th>
+                        <th className="text-left p-4">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {complaints.map((comp, index) => (
+                        <motion.tr key={comp.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
+                          <td className="p-4 whitespace-nowrap">{comp.date}</td>
+                          <td className="p-4 capitalize">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${comp.type === 'complaint' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                              {comp.type}
+                            </span>
+                          </td>
+                          <td className="p-4">{comp.roomNo} <br/><span className="text-xs text-muted-foreground">{comp.usn}</span></td>
+                          <td className="p-4">{comp.category}</td>
+                          <td className="p-4 max-w-xs truncate" title={comp.context}>{comp.context}</td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </GlassCard>
           </motion.div>
         )}
       </AnimatePresence>

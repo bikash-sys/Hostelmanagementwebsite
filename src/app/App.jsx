@@ -19,6 +19,10 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [bookedStudent, setBookedStudent] = useState(null);
   const [user, setUser] = useState(null);
+  const [complaints, setComplaints] = useState([]);
+
+  // Designate the admin account
+  const isAdmin = user?.email === 'bikjha2007@gmail.com';
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -39,8 +43,24 @@ export default function App() {
     setCurrentView('home');
   };
 
+  const handleBookingComplete = (studentData) => {
+    setBookedStudent(studentData);
+    setCurrentView('services');
+  };
+
+  const handleAddComplaint = (complaint) => {
+    setComplaints([...complaints, complaint]);
+  };
+
   const handleViewChange = (view) => {
     const publicViews = ['home', 'about', 'complaints', 'auth'];
+
+    // Admin restriction
+    if (view === 'admin' && !isAdmin) {
+      setCurrentView('home');
+      return;
+    }
+
     if (!user && !publicViews.includes(view)) {
       setCurrentView('auth');
     } else {
@@ -62,11 +82,6 @@ export default function App() {
     setRooms(rooms.filter(room => room.id !== id));
   };
 
-  const handleBookingComplete = (studentData) => {
-    setBookedStudent(studentData);
-    setCurrentView('services');
-  };
-
   // If the student has booked and is on the services page, show the dashboard
   if (currentView === 'services' && bookedStudent) {
     return <ServicesDashboard bookingData={bookedStudent} />;
@@ -74,18 +89,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        currentView={currentView} 
-        onViewChange={handleViewChange} 
-        user={user} 
-        onLogout={handleLogout} 
+      <Header
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        user={user}
+        isAdmin={isAdmin}
+        onLogout={handleLogout}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!user && currentView !== 'auth' && (
           <Home onBookNow={() => setCurrentView('auth')} />
         )}
-        
+
         {!user && currentView === 'auth' && (
           <Auth onAuthSuccess={() => setCurrentView('home')} />
         )}
@@ -93,12 +109,13 @@ export default function App() {
         {user && currentView === 'home' && (
           <Home onBookNow={() => setCurrentView('rooms')} />
         )}
-        
+
         {user && currentView === 'rooms' && (
           <Rooms
             rooms={rooms}
             onBookRoom={handleBookRoom}
             onAddRoom={() => setCurrentView('admin')}
+            isAdmin={isAdmin}
           />
         )}
         {user && currentView === 'bookings' && (
@@ -111,11 +128,12 @@ export default function App() {
         {user && currentView === 'services' && !bookedStudent && (
           <Services onBookNow={() => setCurrentView('rooms')} />
         )}
-        {currentView === 'complaints' && <Complaints />}
-        {user && currentView === 'admin' && (
+        {currentView === 'complaints' && <Complaints onAddComplaint={handleAddComplaint} />}
+        {isAdmin && currentView === 'admin' && (
           <Admin
             rooms={rooms}
             bookings={bookings}
+            complaints={complaints}
             onAddRoom={handleAddRoom}
             onDeleteRoom={handleDeleteRoom}
           />

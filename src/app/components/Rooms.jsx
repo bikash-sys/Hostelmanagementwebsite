@@ -4,7 +4,7 @@ import { AnimatedCard } from './AnimatedCard';
 import { GlassCard } from './GlassCard';
 import { useState } from 'react';
 
-export function Rooms({ rooms, onBookRoom, onAddRoom }) {
+export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin }) {
   const [filter, setFilter] = useState('all');
 
   const filteredRooms = rooms.filter(room => {
@@ -61,7 +61,7 @@ export function Rooms({ rooms, onBookRoom, onAddRoom }) {
             <p className="text-muted-foreground mb-6">
               {rooms.length === 0 ? 'Start by adding your first room to the system.' : 'No rooms match your filter. Try a different category.'}
             </p>
-            {onAddRoom && rooms.length === 0 && (
+            {onAddRoom && rooms.length === 0 && isAdmin && (
               <motion.button onClick={onAddRoom} className="bg-primary text-primary-foreground px-6 py-3 rounded-lg flex items-center gap-2 mx-auto" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Plus className="w-5 h-5" />Add First Room
               </motion.button>

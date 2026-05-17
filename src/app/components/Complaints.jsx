@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti';
 const complaintCategories = ['Maintenance Issue','Cleanliness','Noise Disturbance','Water / Electricity','Food Quality','Security Concern','Room Allocation','Other'];
 const feedbackCategories = ['Hostel Facilities','Food & Menu','Staff & Management','Events & Activities','Room & Amenities','General Suggestion','Appreciation','Other'];
 
-export function Complaints() {
+export function Complaints({ onAddComplaint }) {
   const [submissionType, setSubmissionType] = useState('complaint');
   const [formData, setFormData] = useState({ roomNo: '', usn: '', email: '', category: '', context: '' });
   const [submitted, setSubmitted] = useState(false);
@@ -17,6 +17,9 @@ export function Complaints() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (onAddComplaint) {
+      onAddComplaint({ ...formData, type: submissionType, id: Date.now(), date: new Date().toLocaleDateString() });
+    }
     setSubmitted(true);
     confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: submissionType === 'complaint' ? ['#ef4444','#f97316','#eab308'] : ['#22c55e','#3b82f6','#8b5cf6'] });
   };
