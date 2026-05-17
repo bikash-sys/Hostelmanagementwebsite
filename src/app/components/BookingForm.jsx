@@ -3,6 +3,7 @@ import { Calendar, User, Mail, Phone, Check, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 import confetti from 'canvas-confetti';
+import emailjs from '@emailjs/browser';
 
 export function BookingForm({ selectedRoom, onBack }) {
   const [formData, setFormData] = useState({
@@ -10,12 +11,8 @@ export function BookingForm({ selectedRoom, onBack }) {
     checkIn: '', checkOut: '', guests: 1, specialRequests: '',
   });
   const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-  };
+  const [bookingRef, setBookingRef] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -34,6 +31,43 @@ export function BookingForm({ selectedRoom, onBack }) {
   const nights = calculateNights();
   const totalPrice = selectedRoom ? nights * selectedRoom.price : 0;
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const newBookingRef = `BK${Math.floor(Math.random() * 1000000)}`;
+    setBookingRef(newBookingRef);
+
+    const templateParams = {
+      to_name: formData.firstName + ' ' + formData.lastName,
+      to_email: formData.email,
+      booking_id: newBookingRef,
+      room_name: selectedRoom?.name || 'Room',
+      check_in: formData.checkIn,
+      check_out: formData.checkOut,
+      total_price: `$${totalPrice + Math.round(totalPrice * 0.1)}`
+    };
+
+    // NOTE: Replace these with your actual EmailJS IDs and Keys!
+    emailjs.send(
+      'service_x02nmf9',
+      'template_6w6ox5i',
+      templateParams,
+      'H2wCMESMkzRAYi5A8'
+    ).then((response) => {
+      console.log('Email sent successfully!', response.status, response.text);
+      setIsSubmitting(false);
+      setSubmitted(true);
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    }).catch((error) => {
+      console.error('Failed to send email', error);
+      // We still complete the booking locally even if the email fails during testing.
+      setIsSubmitting(false);
+      setSubmitted(true);
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    });
+  };
+
   if (submitted) {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-2xl mx-auto">
@@ -47,7 +81,7 @@ export function BookingForm({ selectedRoom, onBack }) {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
             <GlassCard className="p-6 space-y-3 bg-gradient-to-br from-primary/5 to-purple-500/5">
-              <div className="flex justify-between"><span className="text-muted-foreground">Booking Reference</span><span className="font-semibold">BK{Math.floor(Math.random() * 1000000)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Booking Reference</span><span className="font-semibold">{bookingRef}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Room</span><span className="font-semibold">{selectedRoom?.name}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Check-in</span><span className="font-semibold">{new Date(formData.checkIn).toLocaleDateString()}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Check-out</span><span className="font-semibold">{new Date(formData.checkOut).toLocaleDateString()}</span></div>
@@ -84,13 +118,13 @@ export function BookingForm({ selectedRoom, onBack }) {
               </div>
               <div><label className="block mb-2"><User className="inline w-4 h-4 mr-2" />Number of Guests</label>
                 <select name="guests" value={formData.guests} onChange={handleChange} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg">
-                  {[1,2,3,4,5,6,7,8].map((num) => (<option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>))}
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (<option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>))}
                 </select>
               </div>
               <div><label className="block mb-2">Special Requests (Optional)</label><textarea name="specialRequests" value={formData.specialRequests} onChange={handleChange} rows={4} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" placeholder="Any special requirements or requests..." /></div>
-              <motion.button type="submit" className="w-full bg-gradient-to-r from-primary to-purple-600 text-primary-foreground py-4 rounded-xl shadow-lg relative overflow-hidden group" whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" }} whileTap={{ scale: 0.98 }}>
-                <span className="relative z-10">Confirm Booking</span>
-                <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />
+              <motion.button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-r from-primary to-purple-600 text-primary-foreground py-4 rounded-xl shadow-lg relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed" whileHover={!isSubmitting ? { scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" } : {}} whileTap={!isSubmitting ? { scale: 0.98 } : {}}>
+                <span className="relative z-10">{isSubmitting ? 'Processing...' : 'Confirm Booking'}</span>
+                {!isSubmitting && <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />}
               </motion.button>
             </form>
           </GlassCard>
