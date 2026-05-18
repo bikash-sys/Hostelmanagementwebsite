@@ -2,7 +2,7 @@ import { Menu, X, Home, Bed, Info, Settings, Sparkles, Wrench, MessageSquareWarn
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function Header({ currentView, onViewChange, user, isAdmin, onLogout }) {
+export function Header({ currentView, onViewChange, user, isAdmin, onLogout, hasRoom }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // If not logged in, restrict nav items.
@@ -16,6 +16,10 @@ export function Header({ currentView, onViewChange, user, isAdmin, onLogout }) {
 
   if (isAdmin) {
     allNavItems.push({ id: 'admin', label: 'Admin', icon: Settings });
+  }
+
+  if (hasRoom) {
+    allNavItems.push({ id: 'your_room', label: 'Your Room', icon: Bed });
   }
 
   const navItems = user 

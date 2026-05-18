@@ -23,6 +23,7 @@ export default function App() {
 
   // Designate the admin account
   const isAdmin = user?.email === 'bikjha2007@gmail.com';
+  const userBooking = bookings.find(b => b.user_email === user?.email);
 
   useEffect(() => {
     const fetchDatabaseData = async () => {
@@ -57,7 +58,7 @@ export default function App() {
 
   const handleBookingComplete = async (studentData) => {
     setBookedStudent(studentData);
-    setCurrentView('services');
+    setCurrentView('your_room');
 
     const { data, error } = await supabase
       .from('bookings')
@@ -66,7 +67,8 @@ export default function App() {
         guest_name: `${studentData.firstName} ${studentData.lastName}`,
         room_name: studentData.roomName,
         check_in: studentData.checkIn,
-        status: 'confirmed'
+        status: 'confirmed',
+        user_email: user?.email
       }])
       .select();
       
@@ -153,9 +155,33 @@ export default function App() {
     }
   };
 
-  // If the student has booked and is on the services page, show the dashboard
-  if (currentView === 'services' && bookedStudent) {
-    return <ServicesDashboard bookingData={bookedStudent} />;
+  const formatBookingData = (booking) => {
+    if (!booking) return null;
+    return {
+      firstName: booking.guest_name.split(' ')[0],
+      lastName: booking.guest_name.split(' ').slice(1).join(' '),
+      roomName: booking.room_name,
+      checkIn: booking.check_in,
+      bookingRef: booking.id
+    };
+  };
+
+  if (currentView === 'your_room' && userBooking) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header
+          currentView={currentView}
+          onViewChange={handleViewChange}
+          user={user}
+          isAdmin={isAdmin}
+          hasRoom={!!userBooking}
+          onLogout={handleLogout}
+        />
+        <div className="flex-1">
+          <ServicesDashboard bookingData={formatBookingData(userBooking)} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -165,6 +191,7 @@ export default function App() {
         onViewChange={handleViewChange}
         user={user}
         isAdmin={isAdmin}
+        hasRoom={!!userBooking}
         onLogout={handleLogout}
       />
 

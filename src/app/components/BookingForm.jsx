@@ -48,8 +48,7 @@ export function BookingForm({ selectedRoom, onBack }) {
       total_price: `$${totalPrice + Math.round(totalPrice * 0.1)}`
     };
 
-    // NOTE: Replace these with your actual EmailJS IDs and Keys!
-    console.log("Sending email with params:", templateParams);
+    // console.log("Sending email with params:", templateParams);
   
     emailjs.send(
       'service_lduq7np',
@@ -90,7 +89,7 @@ export function BookingForm({ selectedRoom, onBack }) {
               <div className="flex justify-between pt-3 border-t border-border"><span>Total</span><span className="text-xl font-semibold text-primary">${totalPrice + Math.round(totalPrice * 0.1)}</span></div>
             </GlassCard>
           </motion.div>
-          <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} onClick={() => { setSubmitted(false); const data = { firstName: formData.firstName, lastName: formData.lastName, email: formData.email, roomName: selectedRoom?.name || 'Room' }; setFormData({ firstName: '', lastName: '', email: '', phone: '', checkIn: '', checkOut: '', guests: 1, specialRequests: '' }); onBack(data); }} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-8 py-3 rounded-xl shadow-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} onClick={() => { setSubmitted(false); const data = { firstName: formData.firstName, lastName: formData.lastName, email: formData.email, roomName: selectedRoom?.name || 'Room', checkIn: formData.checkIn, bookingRef: bookingRef }; setFormData({ firstName: '', lastName: '', email: '', phone: '', checkIn: '', checkOut: '', guests: 1, specialRequests: '' }); onBack(data); }} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-8 py-3 rounded-xl shadow-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             Explore Services
           </motion.button>
         </GlassCard>
