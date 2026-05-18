@@ -53,7 +53,7 @@ export function BookingForm({ selectedRoom, onBack }) {
       'service_lduq7np',
       'template_6w6ox5i',
       templateParams,
-      'H2wCMESMkzRAYi5A8'
+      'WBEyamB5OZk4Fvh55'
     ).then((response) => {
       console.log('Email sent successfully!', response.status, response.text);
       setIsSubmitting(false);
