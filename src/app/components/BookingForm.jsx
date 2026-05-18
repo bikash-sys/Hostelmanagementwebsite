@@ -49,6 +49,8 @@ export function BookingForm({ selectedRoom, onBack }) {
     };
 
     // NOTE: Replace these with your actual EmailJS IDs and Keys!
+    console.log("Sending email with params:", templateParams);
+  
     emailjs.send(
       'service_lduq7np',
       'template_6w6ox5i',
