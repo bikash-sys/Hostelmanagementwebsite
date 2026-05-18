@@ -101,7 +101,7 @@ export default function App() {
   };
 
   const handleViewChange = (view) => {
-    const publicViews = ['home', 'about', 'complaints', 'auth'];
+    const publicViews = ['home', 'about', 'auth'];
 
     // Admin restriction
     if (view === 'admin' && !isAdmin) {
@@ -196,7 +196,7 @@ export default function App() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!user && currentView !== 'auth' && (
+        {!user && currentView === 'home' && (
           <Home onBookNow={() => setCurrentView('auth')} />
         )}
 
@@ -253,9 +253,13 @@ export default function App() {
               <ul className="space-y-2 text-sm">
                 <li><button onClick={() => handleViewChange('home')} className="hover:underline opacity-80">Home</button></li>
                 <li><button onClick={() => handleViewChange('about')} className="hover:underline opacity-80">About Us</button></li>
-                <li><button onClick={() => handleViewChange('rooms')} className="hover:underline opacity-80">Rooms</button></li>
-                <li><button onClick={() => handleViewChange('services')} className="hover:underline opacity-80">Services</button></li>
-                <li><button onClick={() => handleViewChange('complaints')} className="hover:underline opacity-80">Complaints</button></li>
+                {user && (
+                  <>
+                    <li><button onClick={() => handleViewChange('rooms')} className="hover:underline opacity-80">Rooms</button></li>
+                    <li><button onClick={() => handleViewChange('services')} className="hover:underline opacity-80">Services</button></li>
+                    <li><button onClick={() => handleViewChange('complaints')} className="hover:underline opacity-80">Complaints</button></li>
+                  </>
+                )}
               </ul>
             </div>
             <div>

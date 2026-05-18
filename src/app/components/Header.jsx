@@ -24,7 +24,7 @@ export function Header({ currentView, onViewChange, user, isAdmin, onLogout, has
 
   const navItems = user 
     ? allNavItems 
-    : allNavItems.filter(item => ['home', 'about', 'complaints'].includes(item.id));
+    : allNavItems.filter(item => ['home', 'about'].includes(item.id));
 
   return (
     <motion.header
