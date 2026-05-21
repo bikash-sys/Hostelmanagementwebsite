@@ -10,7 +10,8 @@ import { Admin } from './components/Admin';
 import { ServicesDashboard } from './components/ServicesDashboard';
 import { Auth } from './components/Auth';
 import { useEffect } from 'react';
-import { supabase } from '../supabase';
+import { supabase, getProfile } from '../supabase';
+import { ManagerDashboard } from './components/ManagerDashboard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -19,11 +20,12 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [bookedStudent, setBookedStudent] = useState(null);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState('student');
   const [complaints, setComplaints] = useState([]);
 
   // Designate the admin account
   const isAdmin = user?.email === 'bikjha2007@gmail.com';
-  const userBooking = bookings.find(b => b.user_email === user?.email);
+  const userBookings = bookings.filter(b => b.user_email === user?.email);
 
   useEffect(() => {
     const fetchDatabaseData = async () => {
@@ -39,13 +41,35 @@ export default function App() {
 
     fetchDatabaseData();
     // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        if (u.email === 'bikjha2007@gmail.com') {
+          setUserRole('admin');
+        } else {
+          const prof = await getProfile(u.email);
+          setUserRole(prof?.role || 'student');
+        }
+      } else {
+        setUserRole('student');
+      }
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        if (u.email === 'bikjha2007@gmail.com') {
+          setUserRole('admin');
+        } else {
+          const prof = await getProfile(u.email);
+          setUserRole(prof?.role || 'student');
+        }
+      } else {
+        setUserRole('student');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -166,7 +190,11 @@ export default function App() {
     };
   };
 
-  if (currentView === 'your_room' && userBooking) {
+  if (user && userRole === 'manager') {
+    return <ManagerDashboard user={user} onLogout={handleLogout} />;
+  }
+
+  if (currentView === 'your_room' && userBookings.length > 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header
@@ -174,11 +202,11 @@ export default function App() {
           onViewChange={handleViewChange}
           user={user}
           isAdmin={isAdmin}
-          hasRoom={!!userBooking}
+          hasRoom={userBookings.length > 0}
           onLogout={handleLogout}
         />
         <div className="flex-1">
-          <ServicesDashboard bookingData={formatBookingData(userBooking)} />
+          <ServicesDashboard user={user} bookingsData={userBookings.map(formatBookingData)} />
         </div>
       </div>
     );
@@ -191,7 +219,7 @@ export default function App() {
         onViewChange={handleViewChange}
         user={user}
         isAdmin={isAdmin}
-        hasRoom={!!userBooking}
+        hasRoom={userBookings.length > 0}
         onLogout={handleLogout}
       />
 

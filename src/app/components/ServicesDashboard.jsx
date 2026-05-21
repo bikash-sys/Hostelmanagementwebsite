@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getMessMenu, getLaundryRequests, addLaundryRequest, getRoomServices, addRoomService } from '../../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 import { AnimatedCard } from './AnimatedCard';
@@ -96,12 +97,41 @@ const sidebarItems = [
   { id: 'complaints', label: 'Complaints', icon: MessageSquareWarning },
 ];
 
-export function ServicesDashboard({ bookingData }) {
+export function ServicesDashboard({ user, bookingsData, bookingData }) {
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeBookingIndex, setActiveBookingIndex] = useState(0);
 
-  const studentName = bookingData?.firstName || 'Student';
-  const roomName = bookingData?.roomName || 'Room';
+  // Dynamic state hooks
+  const [menuSchedule, setMenuSchedule] = useState([]);
+  const [myLaundries, setMyLaundries] = useState([]);
+  const [myRoomServices, setMyRoomServices] = useState([]);
+  const [isSubmittingService, setIsSubmittingService] = useState(false);
+
+  const bookings = bookingsData || (bookingData ? [bookingData] : []);
+  const activeBooking = bookings[activeBookingIndex] || bookings[0];
+
+  const studentName = activeBooking?.firstName || 'Student';
+  const roomName = activeBooking?.roomName || 'Room';
+
+  const fetchStudentData = async () => {
+    const menu = await getMessMenu();
+    setMenuSchedule(menu);
+
+    const laundries = await getLaundryRequests();
+    setMyLaundries(laundries.filter(l => l.user_email === user?.email));
+
+    const services = await getRoomServices();
+    setMyRoomServices(services.filter(s => s.user_email === user?.email));
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchStudentData();
+      const interval = setInterval(fetchStudentData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const renderServiceContent = (key) => {
     const service = serviceDetails[key];
@@ -122,34 +152,82 @@ export function ServicesDashboard({ bookingData }) {
 
         {/* Laundry */}
         {key === 'laundry' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {service.items.map((item, i) => (
-              <AnimatedCard key={i} delay={i * 0.1}>
-                <GlassCard className="p-5 hover:border-blue-500/50 transition-all cursor-pointer group">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-semibold group-hover:text-blue-500 transition-colors">{item.label}</h3>
-                    <span className="text-lg font-bold text-blue-500">{item.price}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>Delivery in {item.time}</span>
-                  </div>
-                  <motion.button className="mt-3 w-full py-2 rounded-lg bg-blue-500/10 text-blue-500 text-sm font-medium hover:bg-blue-500/20 transition-colors" whileTap={{ scale: 0.95 }}>
-                    Request Pickup
-                  </motion.button>
-                </GlassCard>
-              </AnimatedCard>
-            ))}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {service.items.map((item, i) => (
+                <AnimatedCard key={i} delay={i * 0.1}>
+                  <GlassCard className="p-5 hover:border-blue-500/50 transition-all cursor-pointer group">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold group-hover:text-blue-500 transition-colors">{item.label}</h3>
+                      <span className="text-lg font-bold text-blue-500">{item.price}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>Delivery in {item.time}</span>
+                    </div>
+                    <motion.button 
+                      onClick={async () => {
+                        setIsSubmittingService(true);
+                        await addLaundryRequest({ user_email: user?.email, room_name: roomName, type: item.label });
+                        fetchStudentData();
+                        setIsSubmittingService(false);
+                      }}
+                      disabled={isSubmittingService}
+                      className="mt-3 w-full py-2 rounded-lg bg-blue-500/10 text-blue-500 text-sm font-medium hover:bg-blue-500/20 transition-colors disabled:opacity-50" 
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Request Pickup
+                    </motion.button>
+                  </GlassCard>
+                </AnimatedCard>
+              ))}
+            </div>
+
+            {myLaundries.length > 0 && (
+              <GlassCard className="p-5 mt-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
+                  <WashingMachine className="w-5 h-5 text-blue-500" /> My Laundry History
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-foreground">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-2 font-semibold">Service Type</th>
+                        <th className="text-left py-2 font-semibold">Requested At</th>
+                        <th className="text-left py-2 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myLaundries.map((req) => (
+                        <tr key={req.id} className="border-b border-border/40 last:border-0">
+                          <td className="py-2.5 font-medium">{req.type}</td>
+                          <td className="py-2.5 text-xs text-muted-foreground">
+                            {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'Today'}
+                          </td>
+                          <td className="py-2.5">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              req.status === 'booked' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700 animate-pulse'
+                            }`}>
+                              {req.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </GlassCard>
+            )}
           </div>
         )}
 
         {/* Menu */}
         {key === 'menu' && (
           <div className="space-y-4">
-            {service.schedule.map((meal, i) => (
+            {(menuSchedule.length > 0 ? menuSchedule : service.schedule).map((meal, i) => (
               <AnimatedCard key={i} delay={i * 0.1}>
                 <GlassCard className="p-5">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 text-foreground">
                     <h3 className="font-semibold text-lg">{meal.meal}</h3>
                     <span className="text-sm px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 font-medium">{meal.time}</span>
                   </div>
@@ -162,23 +240,75 @@ export function ServicesDashboard({ bookingData }) {
 
         {/* Housekeeping */}
         {key === 'housekeeping' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {service.requests.map((req, i) => (
-              <AnimatedCard key={i} delay={i * 0.1}>
-                <GlassCard className="p-5 hover:border-purple-500/50 transition-all cursor-pointer group">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">{req.icon}</span>
-                    <div>
-                      <h3 className="font-semibold group-hover:text-purple-500 transition-colors">{req.type}</h3>
-                      <p className="text-sm text-muted-foreground">ETA: {req.eta}</p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {service.requests.map((req, i) => (
+                <AnimatedCard key={i} delay={i * 0.1}>
+                  <GlassCard className="p-5 hover:border-purple-500/50 transition-all cursor-pointer group">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-3xl">{req.icon}</span>
+                      <div>
+                        <h3 className="font-semibold group-hover:text-purple-500 transition-colors text-foreground">{req.type}</h3>
+                        <p className="text-sm text-muted-foreground">ETA: {req.eta}</p>
+                      </div>
                     </div>
-                  </div>
-                  <motion.button className="w-full py-2 rounded-lg bg-purple-500/10 text-purple-500 text-sm font-medium hover:bg-purple-500/20 transition-colors" whileTap={{ scale: 0.95 }}>
-                    Request Now
-                  </motion.button>
-                </GlassCard>
-              </AnimatedCard>
-            ))}
+                    <motion.button 
+                      onClick={async () => {
+                        setIsSubmittingService(true);
+                        await addRoomService({ user_email: user?.email, room_name: roomName, type: req.type });
+                        fetchStudentData();
+                        setIsSubmittingService(false);
+                      }}
+                      disabled={isSubmittingService}
+                      className="w-full py-2 rounded-lg bg-purple-500/10 text-purple-500 text-sm font-medium hover:bg-purple-500/20 transition-colors disabled:opacity-50" 
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Request Now
+                    </motion.button>
+                  </GlassCard>
+                </AnimatedCard>
+              ))}
+            </div>
+
+            {myRoomServices.length > 0 && (
+              <GlassCard className="p-5 mt-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
+                  <Sparkle className="w-5 h-5 text-purple-500" /> My Room Services History
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-foreground">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-2 font-semibold">Service Type</th>
+                        <th className="text-left py-2 font-semibold">Requested At</th>
+                        <th className="text-left py-2 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myRoomServices.map((req) => (
+                        <tr key={req.id} className="border-b border-border/40 last:border-0">
+                          <td className="py-2.5 font-medium">{req.type}</td>
+                          <td className="py-2.5 text-xs text-muted-foreground">
+                            {req.created_at ? new Date(req.created_at).toLocaleDateString() : 'Today'}
+                          </td>
+                          <td className="py-2.5">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              req.status === 'done' 
+                                ? 'bg-green-100 text-green-700' 
+                                : req.status === 'under process' 
+                                ? 'bg-yellow-100 text-yellow-700 animate-pulse' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {req.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </GlassCard>
+            )}
           </div>
         )}
 
@@ -278,6 +408,32 @@ export function ServicesDashboard({ bookingData }) {
               <span>Booking Confirmed</span>
             </div>
           </div>
+          {bookings.length > 1 && (
+            <div className="mt-6 pt-4 border-t border-primary/10">
+              <p className="text-xs font-semibold text-muted-foreground/80 mb-2.5">Switch Room View:</p>
+              <div className="flex flex-wrap gap-2">
+                {bookings.map((booking, idx) => {
+                  const isSelected = activeBookingIndex === idx;
+                  return (
+                    <motion.button
+                      key={booking.bookingRef}
+                      type="button"
+                      onClick={() => setActiveBookingIndex(idx)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-primary to-purple-600 text-white border-transparent shadow-md'
+                          : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                      }`}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      🛏️ {booking.roomName} ({booking.bookingRef})
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </GlassCard>
 
@@ -369,6 +525,22 @@ export function ServicesDashboard({ bookingData }) {
             </div>
           </div>
         </div>
+        {bookings.length > 1 && (
+          <div className="px-6 py-3 border-b border-border bg-muted/10">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80 block mb-1">Active Room</label>
+            <select
+              value={activeBookingIndex}
+              onChange={(e) => setActiveBookingIndex(Number(e.target.value))}
+              className="w-full text-xs font-semibold bg-background border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+            >
+              {bookings.map((booking, idx) => (
+                <option key={booking.bookingRef} value={idx}>
+                  {booking.roomName} ({booking.bookingRef})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {sidebarItems.map((item) => (
@@ -428,6 +600,24 @@ export function ServicesDashboard({ bookingData }) {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden border-t border-border"
             >
+              <div className="p-3 border-b border-border bg-muted/10">
+                {bookings.length > 1 && (
+                  <div className="mb-2">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80 block mb-1">Active Room</label>
+                    <select
+                      value={activeBookingIndex}
+                      onChange={(e) => setActiveBookingIndex(Number(e.target.value))}
+                      className="w-full text-xs font-semibold bg-background border border-border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                    >
+                      {bookings.map((booking, idx) => (
+                        <option key={booking.bookingRef} value={idx}>
+                          {booking.roomName} ({booking.bookingRef})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               <div className="p-3 grid grid-cols-4 gap-2">
                 {sidebarItems.map((item) => (
                   <motion.button

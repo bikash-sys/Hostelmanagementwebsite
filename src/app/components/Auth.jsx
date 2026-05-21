@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Bed, LogIn, UserPlus, Mail, Lock } from 'lucide-react';
-import { supabase } from '../../supabase';
+import { supabase, getProfile, saveProfile } from '../../supabase';
 
 export function Auth({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('student');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
@@ -24,6 +25,14 @@ export function Auth({ onAuthSuccess }) {
           password,
         });
         if (error) throw error;
+
+        // Fetch profile to verify approval for managers
+        const profile = await getProfile(email);
+        if (profile && profile.role === 'manager' && profile.status !== 'approved') {
+          await supabase.auth.signOut();
+          throw new Error('Your Hostel Manager account is pending approval by the Admin.');
+        }
+        
         onAuthSuccess(data.user);
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -31,8 +40,16 @@ export function Auth({ onAuthSuccess }) {
           password,
         });
         if (error) throw error;
-        setMessage('Registration successful! You can now log in.');
-        setIsLogin(true); // switch to login mode on successful signup
+
+        // Save profile with corresponding role and approval status
+        await saveProfile(email, role, role === 'manager' ? 'pending' : 'approved');
+
+        if (role === 'manager') {
+          setMessage('Registration successful! Your Hostel Manager account is pending Admin approval.');
+        } else {
+          setMessage('Registration successful! You can now log in.');
+        }
+        setIsLogin(true);
       }
     } catch (err) {
       setError(err.message || 'An error occurred during authentication.');
@@ -82,7 +99,20 @@ export function Auth({ onAuthSuccess }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-foreground">Account Type</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-foreground"
+              >
+                <option value="student">Student</option>
+                <option value="manager">Hostel Manager</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1.5 text-foreground">Email</label>
             <div className="relative">
