@@ -109,7 +109,7 @@ export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin }) {
                     <div>
                       <p className="text-sm text-muted-foreground">From</p>
                       <motion.p className="text-2xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent" whileHover={{ scale: 1.1 }}>
-                        ${room.price}<span className="text-sm text-muted-foreground">/night</span>
+                        ₹{room.price.toLocaleString()}<span className="text-sm text-muted-foreground">/month</span>
                       </motion.p>
                     </div>
                     <motion.button onClick={() => onBookRoom(room)} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-6 py-3 rounded-xl shadow-lg relative overflow-hidden group" whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }} whileTap={{ scale: 0.95 }}>

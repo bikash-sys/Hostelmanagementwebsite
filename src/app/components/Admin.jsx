@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Users, DollarSign, Bed, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Users, IndianRupee, Bed, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 
@@ -8,11 +8,21 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({ name: '', type: 'Shared', capacity: 1, beds: 1, price: 0, amenities: '' });
 
+  const totalRevenue = bookings.reduce((sum, booking) => {
+    const room = rooms.find(r => r.name === (booking.room || booking.room_name));
+    const period = booking.checkIn || booking.check_in || '';
+    const monthsCount = period.includes(',') ? period.split(',').length : 1;
+    const roomPrice = room ? room.price : 0;
+    return sum + (roomPrice * monthsCount);
+  }, 0);
+
+  const activeGuests = bookings.filter(b => b.status === 'confirmed').length;
+
   const stats = [
     { label: 'Total Bookings', value: bookings.length.toString(), icon: Calendar, color: 'from-blue-500 to-cyan-500' },
     { label: 'Total Rooms', value: rooms.length.toString(), icon: Bed, color: 'from-purple-500 to-pink-500' },
-    { label: 'Revenue (Month)', value: '$0', icon: DollarSign, color: 'from-green-500 to-emerald-500' },
-    { label: 'Active Guests', value: '0', icon: Users, color: 'from-orange-500 to-amber-500' },
+    { label: 'Revenue (Total)', value: `₹${totalRevenue.toLocaleString()}`, icon: IndianRupee, color: 'from-green-500 to-emerald-500' },
+    { label: 'Active Guests', value: activeGuests.toString(), icon: Users, color: 'from-orange-500 to-amber-500' },
   ];
 
   const handleAddRoom = () => {
@@ -67,7 +77,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                   {bookings.length === 0 ? (<div className="text-center py-8"><Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground" /><p className="text-muted-foreground">No bookings yet</p></div>) : (
                     <div className="space-y-3">{bookings.slice(0, 5).map((booking, index) => (
                       <motion.div key={booking.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div><p className="font-medium">{booking.guest}</p><p className="text-sm text-muted-foreground">{booking.room} - {booking.checkIn}</p></div>
+                        <div><p className="font-medium">{booking.guest || booking.guest_name}</p><p className="text-sm text-muted-foreground">{booking.room || booking.room_name} - {booking.checkIn || booking.check_in}</p></div>
                         <span className={`px-3 py-1 rounded-full text-sm ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{booking.status}</span>
                       </motion.div>
                     ))}</div>
@@ -77,7 +87,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                   {rooms.length === 0 ? (<div className="text-center py-8"><Bed className="w-12 h-12 mx-auto mb-3 text-muted-foreground" /><p className="text-muted-foreground">No rooms added yet</p></div>) : (
                     <div className="space-y-4">{rooms.map((room, index) => (
                       <motion.div key={room.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}>
-                        <div className="flex justify-between mb-2"><span className="text-sm font-medium">{room.name}</span><span className="text-sm text-muted-foreground">${room.price}/night</span></div>
+                        <div className="flex justify-between mb-2"><span className="text-sm font-medium">{room.name}</span><span className="text-sm text-muted-foreground">₹{room.price.toLocaleString()}/month</span></div>
                         <div className="w-full bg-muted rounded-full h-2"><motion.div className="bg-gradient-to-r from-primary to-purple-600 h-2 rounded-full" initial={{ width: 0 }} animate={{ width: '0%' }} transition={{ duration: 1, delay: index * 0.1 }} /></div>
                       </motion.div>
                     ))}</div>
@@ -97,7 +107,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                 <div className="overflow-x-auto"><table className="w-full"><thead className="bg-muted/50"><tr><th className="text-left p-4">Booking ID</th><th className="text-left p-4">Guest</th><th className="text-left p-4">Room</th><th className="text-left p-4">Check-in</th><th className="text-left p-4">Status</th></tr></thead>
                   <tbody>{bookings.map((booking, index) => (
                     <motion.tr key={booking.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="p-4">{booking.id}</td><td className="p-4">{booking.guest}</td><td className="p-4">{booking.room}</td><td className="p-4">{booking.checkIn}</td>
+                      <td className="p-4">{booking.id}</td><td className="p-4">{booking.guest || booking.guest_name}</td><td className="p-4">{booking.room || booking.room_name}</td><td className="p-4">{booking.checkIn || booking.check_in}</td>
                       <td className="p-4"><span className={`px-3 py-1 rounded-full text-sm ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{booking.status}</span></td>
                     </motion.tr>
                   ))}</tbody></table></div>
@@ -116,12 +126,30 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
                   <GlassCard className="p-6"><h3 className="mb-4">Add New Room</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="text" placeholder="Room Name" value={newRoom.name} onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
-                      <select value={newRoom.type} onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg"><option value="Shared">Shared</option><option value="Private">Private</option></select>
-                      <input type="number" placeholder="Capacity" value={newRoom.capacity} onChange={(e) => setNewRoom({ ...newRoom, capacity: parseInt(e.target.value) || 1 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
-                      <input type="number" placeholder="Number of Beds" value={newRoom.beds} onChange={(e) => setNewRoom({ ...newRoom, beds: parseInt(e.target.value) || 1 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
-                      <input type="number" placeholder="Price per Night" value={newRoom.price || ''} onChange={(e) => setNewRoom({ ...newRoom, price: parseFloat(e.target.value) || 0 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
-                      <input type="text" placeholder="Amenities (comma separated)" value={newRoom.amenities} onChange={(e) => setNewRoom({ ...newRoom, amenities: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Room Name</label>
+                        <input type="text" placeholder="e.g. Room 101" value={newRoom.name} onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Room Type</label>
+                        <select value={newRoom.type} onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg"><option value="Shared">Shared</option><option value="Private">Private</option></select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Capacity</label>
+                        <input type="number" placeholder="Capacity" value={newRoom.capacity} onChange={(e) => setNewRoom({ ...newRoom, capacity: parseInt(e.target.value) || 1 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Number of Beds</label>
+                        <input type="number" placeholder="Number of Beds" value={newRoom.beds} onChange={(e) => setNewRoom({ ...newRoom, beds: parseInt(e.target.value) || 1 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Price per Month (₹)</label>
+                        <input type="number" placeholder="Price per Month" value={newRoom.price || ''} onChange={(e) => setNewRoom({ ...newRoom, price: parseFloat(e.target.value) || 0 })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-muted-foreground">Amenities (comma separated)</label>
+                        <input type="text" placeholder="e.g. AC, Wifi, Attached Bathroom" value={newRoom.amenities} onChange={(e) => setNewRoom({ ...newRoom, amenities: e.target.value })} className="px-4 py-2 bg-input-background border border-border rounded-lg" />
+                      </div>
                     </div>
                     <div className="flex gap-3 mt-4">
                       <motion.button onClick={handleAddRoom} className="flex-1 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground py-3 rounded-lg" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>Add Room</motion.button>
@@ -145,7 +173,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                       <div className="grid grid-cols-3 gap-4 mb-4">
                         <div><p className="text-2xl font-semibold">{room.capacity}</p><p className="text-xs text-muted-foreground">Capacity</p></div>
                         <div><p className="text-2xl font-semibold">{room.beds}</p><p className="text-xs text-muted-foreground">Beds</p></div>
-                        <div><p className="text-2xl font-semibold text-primary">${room.price}</p><p className="text-xs text-muted-foreground">Per Night</p></div>
+                        <div><p className="text-2xl font-semibold text-primary">₹{room.price.toLocaleString()}</p><p className="text-xs text-muted-foreground">Per Month</p></div>
                       </div>
                       <div className="text-sm text-muted-foreground"><p className="mb-1">Amenities:</p>
                         <div className="flex flex-wrap gap-1">

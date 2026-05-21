@@ -5,11 +5,27 @@ import { GlassCard } from './GlassCard';
 import confetti from 'canvas-confetti';
 import emailjs from '@emailjs/browser';
 
+const ACADEMIC_MONTHS = [
+  { id: 'jun_26', name: 'June', year: 2026 },
+  { id: 'jul_26', name: 'July', year: 2026 },
+  { id: 'aug_26', name: 'August', year: 2026 },
+  { id: 'sep_26', name: 'September', year: 2026 },
+  { id: 'oct_26', name: 'October', year: 2026 },
+  { id: 'nov_26', name: 'November', year: 2026 },
+  { id: 'dec_26', name: 'December', year: 2026 },
+  { id: 'jan_27', name: 'January', year: 2027 },
+  { id: 'feb_27', name: 'February', year: 2027 },
+  { id: 'mar_27', name: 'March', year: 2027 },
+  { id: 'apr_27', name: 'April', year: 2027 },
+  { id: 'may_27', name: 'May', year: 2027 }
+];
+
 export function BookingForm({ selectedRoom, onBack }) {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    checkIn: '', checkOut: '', guests: 1, specialRequests: '',
+    guests: 1, specialRequests: '',
   });
+  const [selectedMonths, setSelectedMonths] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,21 +34,28 @@ export function BookingForm({ selectedRoom, onBack }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const calculateNights = () => {
-    if (formData.checkIn && formData.checkOut) {
-      const start = new Date(formData.checkIn);
-      const end = new Date(formData.checkOut);
-      const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      return nights > 0 ? nights : 0;
+  const handleToggleMonth = (monthId) => {
+    if (selectedMonths.includes(monthId)) {
+      setSelectedMonths(selectedMonths.filter(id => id !== monthId));
+    } else {
+      setSelectedMonths([...selectedMonths, monthId]);
     }
-    return 0;
   };
 
-  const nights = calculateNights();
-  const totalPrice = selectedRoom ? nights * selectedRoom.price : 0;
+  const getSelectedMonthsSorted = () => {
+    return ACADEMIC_MONTHS.filter(m => selectedMonths.includes(m.id));
+  };
+
+  const selectedMonthsString = getSelectedMonthsSorted()
+    .map(m => `${m.name} ${m.year}`)
+    .join(', ');
+
+  const monthsCount = selectedMonths.length;
+  const totalPrice = selectedRoom ? monthsCount * selectedRoom.price : 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (selectedMonths.length === 0) return;
     setIsSubmitting(true);
 
     const newBookingRef = `BK${Math.floor(Math.random() * 1000000)}`;
@@ -43,13 +66,11 @@ export function BookingForm({ selectedRoom, onBack }) {
       to_email: formData.email,
       booking_id: newBookingRef,
       room_name: selectedRoom?.name || 'Room',
-      check_in: formData.checkIn,
-      check_out: formData.checkOut,
-      total_price: `$${totalPrice + Math.round(totalPrice * 0.1)}`
+      check_in: selectedMonthsString,
+      check_out: '-',
+      total_price: `₹${(totalPrice + Math.round(totalPrice * 0.1)).toLocaleString()}`
     };
 
-    // console.log("Sending email with params:", templateParams);
-  
     emailjs.send(
       'service_lduq7np',
       'template_6w6ox5i',
@@ -62,7 +83,6 @@ export function BookingForm({ selectedRoom, onBack }) {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }).catch((error) => {
       console.error('Failed to send email', error);
-      // We still complete the booking locally even if the email fails during testing.
       setIsSubmitting(false);
       setSubmitted(true);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -84,12 +104,11 @@ export function BookingForm({ selectedRoom, onBack }) {
             <GlassCard className="p-6 space-y-3 bg-gradient-to-br from-primary/5 to-purple-500/5">
               <div className="flex justify-between"><span className="text-muted-foreground">Booking Reference</span><span className="font-semibold">{bookingRef}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Room</span><span className="font-semibold">{selectedRoom?.name}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Check-in</span><span className="font-semibold">{new Date(formData.checkIn).toLocaleDateString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Check-out</span><span className="font-semibold">{new Date(formData.checkOut).toLocaleDateString()}</span></div>
-              <div className="flex justify-between pt-3 border-t border-border"><span>Total</span><span className="text-xl font-semibold text-primary">${totalPrice + Math.round(totalPrice * 0.1)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Months Booked</span><span className="font-semibold max-w-[280px] truncate" title={selectedMonthsString}>{selectedMonthsString}</span></div>
+              <div className="flex justify-between pt-3 border-t border-border"><span>Total</span><span className="text-xl font-semibold text-primary">₹{(totalPrice + Math.round(totalPrice * 0.1)).toLocaleString()}</span></div>
             </GlassCard>
           </motion.div>
-          <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} onClick={() => { setSubmitted(false); const data = { firstName: formData.firstName, lastName: formData.lastName, email: formData.email, roomName: selectedRoom?.name || 'Room', checkIn: formData.checkIn, bookingRef: bookingRef }; setFormData({ firstName: '', lastName: '', email: '', phone: '', checkIn: '', checkOut: '', guests: 1, specialRequests: '' }); onBack(data); }} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-8 py-3 rounded-xl shadow-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} onClick={() => { setSubmitted(false); const data = { firstName: formData.firstName, lastName: formData.lastName, email: formData.email, roomName: selectedRoom?.name || 'Room', checkIn: selectedMonthsString, bookingRef: bookingRef }; setFormData({ firstName: '', lastName: '', email: '', phone: '', guests: 1, specialRequests: '' }); setSelectedMonths([]); onBack(data); }} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-8 py-3 rounded-xl shadow-lg" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             Explore Services
           </motion.button>
         </GlassCard>
@@ -113,19 +132,51 @@ export function BookingForm({ selectedRoom, onBack }) {
               </div>
               <div><label className="block mb-2"><Mail className="inline w-4 h-4 mr-2" />Email Address</label><input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" /></div>
               <div><label className="block mb-2"><Phone className="inline w-4 h-4 mr-2" />Phone Number</label><input type="tel" name="phone" required value={formData.phone} onChange={handleChange} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className="block mb-2"><Calendar className="inline w-4 h-4 mr-2" />Check-in Date</label><input type="date" name="checkIn" required value={formData.checkIn} onChange={handleChange} min={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" /></div>
-                <div><label className="block mb-2"><Calendar className="inline w-4 h-4 mr-2" />Check-out Date</label><input type="date" name="checkOut" required value={formData.checkOut} onChange={handleChange} min={formData.checkIn || new Date().toISOString().split('T')[0]} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" /></div>
+              
+              <div className="space-y-3">
+                <label className="block font-medium text-foreground flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Select Booking Months
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 bg-muted/20 p-4 rounded-2xl border border-border/50">
+                  {ACADEMIC_MONTHS.map((m) => {
+                    const isSelected = selectedMonths.includes(m.id);
+                    return (
+                      <motion.button
+                        key={m.id}
+                        type="button"
+                        onClick={() => handleToggleMonth(m.id)}
+                        className={`py-3 px-2 rounded-xl text-sm font-medium flex flex-col items-center justify-center border transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary to-purple-600 text-white border-transparent shadow-md'
+                            : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <span>{m.name}</span>
+                        <span className={`text-[10px] ${isSelected ? 'text-white/80' : 'text-muted-foreground/60'}`}>{m.year}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                {selectedMonths.length === 0 && (
+                  <p className="text-sm text-amber-500 flex items-center gap-1.5 mt-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Please select at least one month to book.
+                  </p>
+                )}
               </div>
+
               <div><label className="block mb-2"><User className="inline w-4 h-4 mr-2" />Number of Guests</label>
                 <select name="guests" value={formData.guests} onChange={handleChange} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg">
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (<option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>))}
                 </select>
               </div>
               <div><label className="block mb-2">Special Requests (Optional)</label><textarea name="specialRequests" value={formData.specialRequests} onChange={handleChange} rows={4} className="w-full px-4 py-2 bg-input-background border border-border rounded-lg" placeholder="Any special requirements or requests..." /></div>
-              <motion.button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-r from-primary to-purple-600 text-primary-foreground py-4 rounded-xl shadow-lg relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed" whileHover={!isSubmitting ? { scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" } : {}} whileTap={!isSubmitting ? { scale: 0.98 } : {}}>
+              <motion.button type="submit" disabled={isSubmitting || selectedMonths.length === 0} className="w-full bg-gradient-to-r from-primary to-purple-600 text-primary-foreground py-4 rounded-xl shadow-lg relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed" whileHover={(!isSubmitting && selectedMonths.length > 0) ? { scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.3)" } : {}} whileTap={(!isSubmitting && selectedMonths.length > 0) ? { scale: 0.98 } : {}}>
                 <span className="relative z-10">{isSubmitting ? 'Processing...' : 'Confirm Booking'}</span>
-                {!isSubmitting && <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />}
+                {(!isSubmitting && selectedMonths.length > 0) && <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />}
               </motion.button>
             </form>
           </GlassCard>
@@ -134,14 +185,27 @@ export function BookingForm({ selectedRoom, onBack }) {
           <GlassCard className="p-6 sticky top-20">
             <h3 className="mb-4">Booking Summary</h3>
             <div className="space-y-4">
-              <div><p className="text-muted-foreground">Room</p><p>{selectedRoom?.name}</p></div>
-              {nights > 0 && (
+              <div><p className="text-muted-foreground">Room</p><p className="font-semibold text-lg">{selectedRoom?.name}</p></div>
+              {selectedMonths.length > 0 && (
                 <>
-                  <div className="border-t border-border pt-4"><p className="text-muted-foreground">Dates</p><p className="text-sm">{formData.checkIn && new Date(formData.checkIn).toLocaleDateString()} - {formData.checkOut && new Date(formData.checkOut).toLocaleDateString()}</p><p className="text-sm text-muted-foreground mt-1">{nights} {nights === 1 ? 'night' : 'nights'}</p></div>
                   <div className="border-t border-border pt-4">
-                    <div className="flex justify-between mb-2"><span className="text-muted-foreground">${selectedRoom?.price} × {nights} nights</span><span>${totalPrice}</span></div>
-                    <div className="flex justify-between mb-2"><span className="text-muted-foreground">Service Fee</span><span>${Math.round(totalPrice * 0.1)}</span></div>
-                    <motion.div className="flex justify-between pt-2 border-t border-border" whileHover={{ scale: 1.02 }}><span>Total</span><span className="text-2xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">${totalPrice + Math.round(totalPrice * 0.1)}</span></motion.div>
+                    <p className="text-muted-foreground">Months Booked</p>
+                    <p className="text-sm font-medium">{selectedMonthsString}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{selectedMonths.length} {selectedMonths.length === 1 ? 'month' : 'months'}</p>
+                  </div>
+                  <div className="border-t border-border pt-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-muted-foreground">₹{selectedRoom?.price.toLocaleString()} × {selectedMonths.length} months</span>
+                      <span>₹{totalPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-muted-foreground">Service Fee (10%)</span>
+                      <span>₹{Math.round(totalPrice * 0.1).toLocaleString()}</span>
+                    </div>
+                    <motion.div className="flex justify-between pt-3 border-t border-border font-medium" whileHover={{ scale: 1.02 }}>
+                      <span>Total</span>
+                      <span className="text-2xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">₹{(totalPrice + Math.round(totalPrice * 0.1)).toLocaleString()}</span>
+                    </motion.div>
                   </div>
                 </>
               )}
