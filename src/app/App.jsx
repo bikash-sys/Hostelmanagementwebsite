@@ -76,8 +76,11 @@ export default function App() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // Reset state immediately so UI updates before async signOut
+    setUser(null);
+    setUserRole('student');
     setCurrentView('home');
+    await supabase.auth.signOut();
   };
 
   const handleBookingComplete = async (studentData) => {
