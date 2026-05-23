@@ -20,6 +20,18 @@ const ACADEMIC_MONTHS = [
   { id: 'may_27', name: 'May', year: 2027 }
 ];
 
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback RFC4122 v4 UUID generator
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export function BookingForm({ selectedRoom, onBack }) {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -58,7 +70,7 @@ export function BookingForm({ selectedRoom, onBack }) {
     if (selectedMonths.length === 0) return;
     setIsSubmitting(true);
 
-    const newBookingRef = `BK${Math.floor(Math.random() * 1000000)}`;
+    const newBookingRef = generateUUID();
     setBookingRef(newBookingRef);
 
     const templateParams = {
@@ -102,7 +114,7 @@ export function BookingForm({ selectedRoom, onBack }) {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
             <GlassCard className="p-6 space-y-3 bg-gradient-to-br from-primary/5 to-purple-500/5">
-              <div className="flex justify-between"><span className="text-muted-foreground">Booking Reference</span><span className="font-semibold">{bookingRef}</span></div>
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Booking Reference</span><span className="font-mono font-semibold text-xs bg-muted/50 px-2.5 py-1 rounded-lg max-w-[220px] truncate" title={bookingRef}>{bookingRef}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Room</span><span className="font-semibold">{selectedRoom?.name}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Months Booked</span><span className="font-semibold max-w-[280px] truncate" title={selectedMonthsString}>{selectedMonthsString}</span></div>
               <div className="flex justify-between pt-3 border-t border-border"><span>Total</span><span className="text-xl font-semibold text-primary">₹{(totalPrice + Math.round(totalPrice * 0.1)).toLocaleString()}</span></div>

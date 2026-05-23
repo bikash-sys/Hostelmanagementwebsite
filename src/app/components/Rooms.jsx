@@ -1,10 +1,10 @@
-import { Users, Bed, CheckCircle, Plus } from 'lucide-react';
+import { Users, Bed, CheckCircle, Plus, BedDouble } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AnimatedCard } from './AnimatedCard';
 import { GlassCard } from './GlassCard';
 import { useState } from 'react';
 
-export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin }) {
+export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin, hasExistingBooking, onGoToRoom }) {
   const [filter, setFilter] = useState('all');
 
   const filteredRooms = rooms.filter(room => {
@@ -29,9 +29,38 @@ export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin }) {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
         <h1 className="mb-3 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Our Rooms</h1>
         <p className="text-muted-foreground text-lg">
-          {rooms.length === 0 ? 'No rooms available yet. Add your first room!' : 'Choose from our range of comfortable accommodations'}
+          {rooms.length === 0 ? 'All rooms are currently occupied.' : 'Choose from our range of comfortable accommodations'}
         </p>
       </motion.div>
+
+      {/* Banner shown when user already has a booking */}
+      {hasExistingBooking && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between gap-4 px-6 py-4 rounded-2xl bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
+              <BedDouble className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">You already have a room booked</p>
+              <p className="text-sm text-muted-foreground">One room per student. Go to your dashboard to manage your booking.</p>
+            </div>
+          </div>
+          {onGoToRoom && (
+            <motion.button
+              onClick={onGoToRoom}
+              className="flex-shrink-0 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white text-sm font-semibold shadow-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Go to My Room →
+            </motion.button>
+          )}
+        </motion.div>
+      )}
 
       {rooms.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex justify-center gap-3">
@@ -112,10 +141,22 @@ export function Rooms({ rooms, onBookRoom, onAddRoom, isAdmin }) {
                         ₹{room.price.toLocaleString()}<span className="text-sm text-muted-foreground">/month</span>
                       </motion.p>
                     </div>
-                    <motion.button onClick={() => onBookRoom(room)} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-6 py-3 rounded-xl shadow-lg relative overflow-hidden group" whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }} whileTap={{ scale: 0.95 }}>
-                      <span className="relative z-10">Book Now</span>
-                      <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />
-                    </motion.button>
+                    {hasExistingBooking ? (
+                      <motion.button
+                        onClick={onGoToRoom}
+                        className="bg-muted text-muted-foreground px-6 py-3 rounded-xl text-sm font-semibold border border-border"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        title="You already have a room booked"
+                      >
+                        Already Booked
+                      </motion.button>
+                    ) : (
+                      <motion.button onClick={() => onBookRoom(room)} className="bg-gradient-to-r from-primary to-purple-600 text-primary-foreground px-6 py-3 rounded-xl shadow-lg relative overflow-hidden group" whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }} whileTap={{ scale: 0.95 }}>
+                        <span className="relative z-10">Book Now</span>
+                        <motion.div className="absolute inset-0 bg-white/20" initial={{ x: '-100%' }} whileHover={{ x: '100%' }} transition={{ duration: 0.5 }} />
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </GlassCard>

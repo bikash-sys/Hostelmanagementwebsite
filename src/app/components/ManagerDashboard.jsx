@@ -283,6 +283,7 @@ export function ManagerDashboard({ user, onLogout }) {
                           <tr>
                             <th className="text-left p-4">Room No</th>
                             <th className="text-left p-4">Service Type</th>
+                            <th className="text-left p-4">Student Email</th>
                             <th className="text-left p-4">Status</th>
                             <th className="text-left p-4 font-semibold">Mark Service Status</th>
                           </tr>
@@ -292,6 +293,7 @@ export function ManagerDashboard({ user, onLogout }) {
                             <tr key={req.id} className="border-b border-border/50 hover:bg-muted/20">
                               <td className="p-4 font-bold">{req.room_name}</td>
                               <td className="p-4 text-sm font-medium">{req.type}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{req.user_email}</td>
                               <td className="p-4">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                                   req.status === 'done' ? 'bg-green-100 text-green-700' : req.status === 'under process' ? 'bg-yellow-100 text-yellow-700 animate-pulse' : 'bg-red-100 text-red-700'
@@ -299,7 +301,7 @@ export function ManagerDashboard({ user, onLogout }) {
                               </td>
                               <td className="p-4 flex gap-2">
                                 <button onClick={() => handleUpdateRoomService(req.id, 'under process')} className="px-2.5 py-1 bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 text-xs font-semibold rounded-lg transition-colors border border-yellow-500/20">Under Process</button>
-                                <button onClick={() => handleUpdateRoomService(req.id, 'done')} className="px-2.5 py-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 text-xs font-semibold rounded-lg transition-colors border border-green-500/20">Done</button>
+                                <button onClick={() => handleUpdateRoomService(req.id, 'done')} className="px-2.5 py-1 bg-green-500/10 text-green-600 hover:bg-green-700 text-xs font-semibold rounded-lg transition-colors border border-green-500/20">Done</button>
                               </td>
                             </tr>
                           ))}
@@ -326,6 +328,7 @@ export function ManagerDashboard({ user, onLogout }) {
                           <tr>
                             <th className="text-left p-4">Student Room</th>
                             <th className="text-left p-4">Laundry Type</th>
+                            <th className="text-left p-4">Student Email</th>
                             <th className="text-left p-4">Status</th>
                             <th className="text-left p-4 font-semibold">Change Scheduling</th>
                           </tr>
@@ -335,6 +338,7 @@ export function ManagerDashboard({ user, onLogout }) {
                             <tr key={req.id} className="border-b border-border/50 hover:bg-muted/20">
                               <td className="p-4 font-bold">{req.room_name}</td>
                               <td className="p-4 text-sm font-medium">{req.type}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{req.user_email}</td>
                               <td className="p-4">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                                   req.status === 'booked' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700 animate-pulse'

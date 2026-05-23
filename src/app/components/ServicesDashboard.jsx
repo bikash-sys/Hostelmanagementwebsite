@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMessMenu, getLaundryRequests, addLaundryRequest, getRoomServices, addRoomService } from '../../supabase';
+import { supabase, getMessMenu, getLaundryRequests, addLaundryRequest, getRoomServices, addRoomService } from '../../supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 import { AnimatedCard } from './AnimatedCard';
@@ -7,7 +7,7 @@ import { Complaints } from './Complaints';
 import {
   WashingMachine, UtensilsCrossed, Sparkle, CreditCard, Wifi, Headphones,
   LayoutDashboard, Bell, User, LogOut, Clock, CheckCircle, AlertCircle,
-  ChevronRight, Calendar, MessageSquareWarning, Bed
+  ChevronRight, Calendar, MessageSquareWarning, Bed, Home
 } from 'lucide-react';
 
 const serviceDetails = {
@@ -97,7 +97,7 @@ const sidebarItems = [
   { id: 'complaints', label: 'Complaints', icon: MessageSquareWarning },
 ];
 
-export function ServicesDashboard({ user, bookingsData, bookingData }) {
+export function ServicesDashboard({ user, bookingsData, bookingData, onLogout, onBackToWebsite }) {
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeBookingIndex, setActiveBookingIndex] = useState(0);
@@ -107,6 +107,25 @@ export function ServicesDashboard({ user, bookingsData, bookingData }) {
   const [myLaundries, setMyLaundries] = useState([]);
   const [myRoomServices, setMyRoomServices] = useState([]);
   const [isSubmittingService, setIsSubmittingService] = useState(false);
+
+  const handleAddComplaint = async (complaint) => {
+    const { data, error } = await supabase
+      .from('complaints')
+      .insert([{
+        date: complaint.date,
+        type: complaint.type,
+        room_no: complaint.roomNo,
+        usn: complaint.usn,
+        category: complaint.category,
+        context: complaint.context,
+        email: complaint.email
+      }])
+      .select();
+      
+    if (error) {
+      console.error('Error saving complaint:', error);
+    }
+  };
 
   const bookings = bookingsData || (bookingData ? [bookingData] : []);
   const activeBooking = bookings[activeBookingIndex] || bookings[0];
@@ -390,125 +409,186 @@ export function ServicesDashboard({ user, bookingsData, bookingData }) {
     );
   };
 
-  const renderOverview = () => (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      {/* Welcome Banner */}
-      <GlassCard className="p-8 bg-gradient-to-br from-primary/5 to-purple-500/5 relative overflow-hidden">
-        <motion.div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 4, repeat: Infinity }} />
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {studentName}! 👋</h1>
-          <p className="text-muted-foreground text-lg">Here's your hostel dashboard at a glance.</p>
-          <div className="flex flex-wrap gap-4 mt-4">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm">
-              <Bed className="w-4 h-4 text-primary" />
-              <span>{roomName}</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 text-sm">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>Booking Confirmed</span>
-            </div>
-          </div>
-          {bookings.length > 1 && (
-            <div className="mt-6 pt-4 border-t border-primary/10">
-              <p className="text-xs font-semibold text-muted-foreground/80 mb-2.5">Switch Room View:</p>
-              <div className="flex flex-wrap gap-2">
-                {bookings.map((booking, idx) => {
-                  const isSelected = activeBookingIndex === idx;
-                  return (
-                    <motion.button
-                      key={booking.bookingRef}
-                      type="button"
-                      onClick={() => setActiveBookingIndex(idx)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-primary to-purple-600 text-white border-transparent shadow-md'
-                          : 'bg-background hover:bg-muted text-muted-foreground border-border'
-                      }`}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      🛏️ {booking.roomName} ({booking.bookingRef})
-                    </motion.button>
-                  );
-                })}
+  const renderOverview = () => {
+    const combinedHistory = [
+      ...myLaundries.map(l => ({ ...l, category: 'laundry' })),
+      ...myRoomServices.map(s => ({ ...s, category: 'housekeeping' }))
+    ].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+     .slice(0, 5);
+
+    return (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+        {/* Welcome Banner */}
+        <GlassCard className="p-8 bg-gradient-to-br from-primary/5 to-purple-500/5 relative overflow-hidden">
+          <motion.div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 4, repeat: Infinity }} />
+          <div className="relative z-10">
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {studentName}! 👋</h1>
+            <p className="text-muted-foreground text-lg">Here's your hostel dashboard at a glance.</p>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-sm">
+                <Bed className="w-4 h-4 text-primary" />
+                <span>{roomName}</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 text-sm">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Booking Confirmed</span>
               </div>
             </div>
-          )}
-        </div>
-      </GlassCard>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Pending Dues', value: '₹4,850', color: 'from-amber-500 to-orange-500', icon: CreditCard },
-          { label: 'Wifi Status', value: 'Connected', color: 'from-green-500 to-emerald-500', icon: Wifi },
-          { label: 'Notifications', value: '3 New', color: 'from-blue-500 to-cyan-500', icon: Bell },
-          { label: 'Next Meal', value: 'Lunch', color: 'from-purple-500 to-pink-500', icon: UtensilsCrossed },
-        ].map((stat, i) => (
-          <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
-            <GlassCard className="p-4 hover:shadow-lg transition-shadow">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
-                <stat.icon className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-            </GlassCard>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Service Quick Access */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Quick Access</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {Object.entries(serviceDetails).map(([key, service], i) => {
-            const ServiceIcon = service.icon;
-            return (
-              <AnimatedCard key={key} delay={i * 0.05}>
-                <motion.div
-                  onClick={() => setActiveSection(key)}
-                  className="cursor-pointer"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <GlassCard className="p-4 text-center hover:border-primary/50 transition-all group">
-                    <div className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center`}>
-                      <ServiceIcon className="w-6 h-6 text-white" />
-                    </div>
-                    <p className="font-medium text-sm group-hover:text-primary transition-colors">{service.title.replace(' Service', '').replace(' Access', '')}</p>
-                  </GlassCard>
-                </motion.div>
-              </AnimatedCard>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Recent Notices */}
-      <div>
-        <h2 className="text-xl font-bold mb-4">Recent Notices</h2>
-        <div className="space-y-3">
-          {[
-            { title: 'Water tank cleaning scheduled', time: '2 hours ago', type: 'info' },
-            { title: 'Mess menu updated for this week', time: '5 hours ago', type: 'update' },
-            { title: 'Hostel fee deadline: May 31, 2026', time: '1 day ago', type: 'important' },
-          ].map((notice, i) => (
-            <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-              <GlassCard className="p-4 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${notice.type === 'important' ? 'bg-red-500' : notice.type === 'update' ? 'bg-blue-500' : 'bg-green-500'}`} />
-                  <div>
-                    <p className="font-medium group-hover:text-primary transition-colors">{notice.title}</p>
-                    <p className="text-sm text-muted-foreground">{notice.time}</p>
-                  </div>
+            {bookings.length > 1 && (
+              <div className="mt-6 pt-4 border-t border-primary/10">
+                <p className="text-xs font-semibold text-muted-foreground/80 mb-2.5">Switch Room View:</p>
+                <div className="flex flex-wrap gap-2">
+                  {bookings.map((booking, idx) => {
+                    const isSelected = activeBookingIndex === idx;
+                    return (
+                      <motion.button
+                        key={booking.bookingRef}
+                        type="button"
+                        onClick={() => setActiveBookingIndex(idx)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-primary to-purple-600 text-white border-transparent shadow-md'
+                            : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                        }`}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        🛏️ {booking.roomName} ({booking.bookingRef})
+                      </motion.button>
+                    );
+                  })}
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-              </GlassCard>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Pending Dues', value: '₹4,850', color: 'from-amber-500 to-orange-500', icon: CreditCard, target: 'payments' },
+            { label: 'Wifi Status', value: 'Connected', color: 'from-green-500 to-emerald-500', icon: Wifi, target: 'wifi' },
+            { label: 'Notifications', value: '3 New', color: 'from-blue-500 to-cyan-500', icon: Bell, target: 'overview' },
+            { label: 'Next Meal', value: 'Lunch', color: 'from-purple-500 to-pink-500', icon: UtensilsCrossed, target: 'menu' },
+          ].map((stat, i) => (
+            <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
+              <div onClick={() => stat.target && setActiveSection(stat.target)} className="cursor-pointer">
+                <GlassCard className="p-4 hover:shadow-lg transition-shadow">
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
+                    <stat.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </GlassCard>
+              </div>
             </motion.div>
           ))}
         </div>
-      </div>
-    </motion.div>
-  );
+
+        {/* Service Quick Access */}
+        <div>
+          <h2 className="text-xl font-bold mb-4">Quick Access</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Object.entries(serviceDetails).map(([key, service], i) => {
+              const ServiceIcon = service.icon;
+              return (
+                <AnimatedCard key={key} delay={i * 0.05}>
+                  <motion.div
+                    onClick={() => setActiveSection(key)}
+                    className="cursor-pointer"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <GlassCard className="p-4 text-center hover:border-primary/50 transition-all group">
+                      <div className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center`}>
+                        <ServiceIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <p className="font-medium text-sm group-hover:text-primary transition-colors">{service.title.replace(' Service', '').replace(' Access', '')}</p>
+                    </GlassCard>
+                  </motion.div>
+                </AnimatedCard>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Recent Notices */}
+          <div>
+            <h2 className="text-xl font-bold mb-4">Recent Notices</h2>
+            <div className="space-y-3">
+              {[
+                { title: 'Water tank cleaning scheduled', time: '2 hours ago', type: 'info' },
+                { title: 'Mess menu updated for this week', time: '5 hours ago', type: 'update' },
+                { title: 'Hostel fee deadline: May 31, 2026', time: '1 day ago', type: 'important' },
+              ].map((notice, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
+                  <GlassCard className="p-4 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${notice.type === 'important' ? 'bg-red-500' : notice.type === 'update' ? 'bg-blue-500' : 'bg-green-500'}`} />
+                      <div>
+                        <p className="font-medium group-hover:text-primary transition-colors">{notice.title}</p>
+                        <p className="text-sm text-muted-foreground">{notice.time}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </GlassCard>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Service Bookings & History */}
+          <div>
+            <h2 className="text-xl font-bold mb-4">My Service History</h2>
+            <div className="space-y-3">
+              {combinedHistory.length === 0 ? (
+                <GlassCard className="p-8 text-center text-muted-foreground text-sm">
+                  No recent laundry or housekeeping bookings found.
+                </GlassCard>
+              ) : (
+                combinedHistory.map((item, i) => {
+                  const isLaundry = item.category === 'laundry';
+                  return (
+                    <motion.div key={item.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
+                      <GlassCard 
+                        onClick={() => setActiveSection(item.category)}
+                        className="p-4 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-muted flex items-center justify-center">
+                            {isLaundry ? (
+                              <WashingMachine className="w-4 h-4 text-blue-500" />
+                            ) : (
+                              <Sparkle className="w-4 h-4 text-purple-500" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium group-hover:text-primary transition-colors">{item.type}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isLaundry ? 'Laundry Service' : 'Housekeeping'} • {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Today'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          item.status === 'done' || item.status === 'booked' 
+                            ? 'bg-green-100 text-green-700' 
+                            : item.status === 'under process' 
+                            ? 'bg-yellow-100 text-yellow-700 animate-pulse' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </GlassCard>
+                    </motion.div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -561,6 +641,16 @@ export function ServicesDashboard({ user, bookingsData, bookingData }) {
         </nav>
 
         <div className="p-4 border-t border-border">
+          {onBackToWebsite && (
+            <motion.button
+              onClick={onBackToWebsite}
+              className="w-full mb-3 flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              whileTap={{ scale: 0.97 }}
+            >
+              <Home className="w-4 h-4" />
+              <span className="font-medium">Main Website</span>
+            </motion.button>
+          )}
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
@@ -569,6 +659,11 @@ export function ServicesDashboard({ user, bookingsData, bookingData }) {
               <p className="font-medium text-sm truncate">{studentName}</p>
               <p className="text-xs text-muted-foreground truncate">{roomName}</p>
             </div>
+            {onLogout && (
+              <button onClick={onLogout} title="Log Out" className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -582,13 +677,25 @@ export function ServicesDashboard({ user, bookingsData, bookingData }) {
             </div>
             <span className="font-bold">DormDesk</span>
           </div>
-          <motion.button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-muted"
-            whileTap={{ scale: 0.9 }}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-          </motion.button>
+          <div className="flex items-center gap-1.5">
+            {onLogout && (
+              <button onClick={onLogout} title="Log Out" className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
+            {onBackToWebsite && (
+              <button onClick={onBackToWebsite} title="Main Website" className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+                <Home className="w-5 h-5" />
+              </button>
+            )}
+            <motion.button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-lg hover:bg-muted"
+              whileTap={{ scale: 0.9 }}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+            </motion.button>
+          </div>
         </div>
 
         {/* Mobile Nav */}

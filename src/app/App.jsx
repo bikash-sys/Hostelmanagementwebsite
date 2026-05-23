@@ -12,6 +12,9 @@ import { Auth } from './components/Auth';
 import { useEffect } from 'react';
 import { supabase, getProfile } from '../supabase';
 import { ManagerDashboard } from './components/ManagerDashboard';
+import { motion } from 'motion/react';
+import { Bed, AlertCircle } from 'lucide-react';
+import { GlassCard } from './components/GlassCard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -25,7 +28,10 @@ export default function App() {
 
   // Designate the admin account
   const isAdmin = user?.email === 'bikjha2007@gmail.com';
-  const userBookings = bookings.filter(b => b.user_email === user?.email);
+  const userBookings = bookings.filter(b => b.user_email === user?.email && b.status === 'confirmed');
+  const hasExistingBooking = userBookings.length > 0;
+  // Only show rooms that are not marked unavailable
+  const availableRooms = rooms.filter(r => r.available !== false);
 
   useEffect(() => {
     const fetchDatabaseData = async () => {
@@ -90,25 +96,89 @@ export default function App() {
   };
 
   const handleBookingComplete = async (studentData) => {
+    // If studentData doesn't have bookingRef (e.g. back button click), go back to rooms
+    if (!studentData || !studentData.bookingRef || typeof studentData.bookingRef !== 'string') {
+      setCurrentView('rooms');
+      return;
+    }
+
+    // ── OPTIMISTIC UPDATE ────────────────────────────────────────────────────
+    // Build a synthetic booking object immediately from the form data so the
+    // "Your Room" tab and dashboard appear INSTANTLY without waiting for the DB.
+    const optimisticBooking = {
+      id: studentData.bookingRef,
+      guest_name: `${studentData.firstName} ${studentData.lastName}`,
+      room_name: studentData.roomName,
+      check_in: studentData.checkIn,
+      status: 'confirmed',
+      user_email: user?.email,
+    };
+
+    // Update state and navigate immediately — user sees dashboard right away
+    setBookings(prev => [...prev, optimisticBooking]);
     setBookedStudent(studentData);
+
+    // Mark room unavailable locally right away
+    const bookedRoom = rooms.find(r => r.name === studentData.roomName);
+    if (bookedRoom) {
+      setRooms(prev => prev.map(r => r.id === bookedRoom.id ? { ...r, available: false } : r));
+    }
+
     setCurrentView('your_room');
 
-    const { data, error } = await supabase
+    // ── BACKGROUND DB WRITE ──────────────────────────────────────────────────
+    // Attempt to persist to Supabase — silent if it fails (state is already updated)
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([{
+          id: studentData.bookingRef,
+          guest_name: `${studentData.firstName} ${studentData.lastName}`,
+          room_name: studentData.roomName,
+          check_in: studentData.checkIn,
+          status: 'confirmed',
+          user_email: user?.email
+        }])
+        .select();
+
+      if (data && data.length > 0) {
+        // Replace the optimistic entry with the real DB record
+        setBookings(prev => prev.map(b => b.id === studentData.bookingRef ? data[0] : b));
+      }
+
+      // Persist room unavailability to DB
+      if (bookedRoom) {
+        await supabase.from('rooms').update({ available: false }).eq('id', bookedRoom.id);
+      }
+
+      if (error) {
+        console.warn('Background booking save failed (user already in dashboard):', error.message);
+      }
+    } catch (err) {
+      console.warn('Network error during background booking save:', err.message);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    const bookingToCancel = bookings.find(b => b.id === bookingId);
+    if (!bookingToCancel) return;
+
+    const { error } = await supabase
       .from('bookings')
-      .insert([{
-        id: studentData.bookingRef,
-        guest_name: `${studentData.firstName} ${studentData.lastName}`,
-        room_name: studentData.roomName,
-        check_in: studentData.checkIn,
-        status: 'confirmed',
-        user_email: user?.email
-      }])
-      .select();
+      .update({ status: 'cancelled' })
+      .eq('id', bookingId);
+
+    if (!error) {
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
       
-    if (data && data.length > 0) {
-      setBookings([...bookings, data[0]]);
-    } else if (error) {
-      console.error('Error saving booking:', error);
+      const roomName = bookingToCancel.room_name || bookingToCancel.room;
+      const bookedRoom = rooms.find(r => r.name === roomName);
+      if (bookedRoom) {
+        await supabase.from('rooms').update({ available: true }).eq('id', bookedRoom.id);
+        setRooms(prev => prev.map(r => r.id === bookedRoom.id ? { ...r, available: true } : r));
+      }
+    } else {
+      console.error('Error cancelling booking:', error);
     }
   };
 
@@ -151,6 +221,11 @@ export default function App() {
   };
 
   const handleBookRoom = (room) => {
+    // Prevent booking a second room
+    if (hasExistingBooking) {
+      setCurrentView('your_room');
+      return;
+    }
     setSelectedRoom(room);
     setCurrentView('bookings');
   };
@@ -205,19 +280,12 @@ export default function App() {
 
   if (currentView === 'your_room' && userBookings.length > 0) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header
-          currentView={currentView}
-          onViewChange={handleViewChange}
-          user={user}
-          isAdmin={isAdmin}
-          hasRoom={userBookings.length > 0}
-          onLogout={handleLogout}
-        />
-        <div className="flex-1">
-          <ServicesDashboard user={user} bookingsData={userBookings.map(formatBookingData)} />
-        </div>
-      </div>
+      <ServicesDashboard
+        user={user}
+        bookingsData={userBookings.map(formatBookingData)}
+        onLogout={handleLogout}
+        onBackToWebsite={() => setCurrentView('home')}
+      />
     );
   }
 
@@ -247,10 +315,12 @@ export default function App() {
 
         {user && currentView === 'rooms' && (
           <Rooms
-            rooms={rooms}
+            rooms={availableRooms}
             onBookRoom={handleBookRoom}
             onAddRoom={() => setCurrentView('admin')}
             isAdmin={isAdmin}
+            hasExistingBooking={hasExistingBooking}
+            onGoToRoom={() => setCurrentView('your_room')}
           />
         )}
         {user && currentView === 'bookings' && (
@@ -260,6 +330,57 @@ export default function App() {
           />
         )}
         {currentView === 'about' && <About />}
+        {currentView === 'your_room' && userBookings.length === 0 && (
+          bookedStudent ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+              <GlassCard className="p-12 max-w-md w-full border border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 relative overflow-hidden shadow-2xl">
+                <div className="relative z-10 space-y-6">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
+                    <Bed className="w-8 h-8 text-white animate-bounce" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Setting Up Your Room...</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      We are finalizing your hostel dashboard. This will only take a moment.
+                    </p>
+                  </div>
+                  <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="bg-gradient-to-r from-primary to-purple-600 h-full rounded-full"
+                      animate={{ x: ['-100%', '100%'] }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                      style={{ width: '50%' }}
+                    />
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+              <GlassCard className="p-12 max-w-md w-full border border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 relative overflow-hidden shadow-2xl">
+                <div className="relative z-10 space-y-6">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-destructive/10 to-destructive/20 flex items-center justify-center shadow-sm">
+                    <AlertCircle className="w-8 h-8 text-destructive" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-foreground">No Room Booked</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      You don't have an active room booking in our database. Book a room to access your student dashboard.
+                    </p>
+                  </div>
+                  <motion.button 
+                    onClick={() => setCurrentView('rooms')} 
+                    className="w-full bg-gradient-to-r from-primary to-purple-600 text-white py-3 rounded-xl font-semibold shadow-lg"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Browse Rooms
+                  </motion.button>
+                </div>
+              </GlassCard>
+            </div>
+          )
+        )}
         {user && currentView === 'services' && !bookedStudent && (
           <Services onBookNow={() => setCurrentView('rooms')} />
         )}
@@ -271,6 +392,7 @@ export default function App() {
             complaints={complaints}
             onAddRoom={handleAddRoom}
             onDeleteRoom={handleDeleteRoom}
+            onCancelBooking={handleCancelBooking}
           />
         )}
       </main>

@@ -4,7 +4,7 @@ import { Calendar, Users, IndianRupee, Bed, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from './GlassCard';
 
-export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoom }) {
+export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoom, onCancelBooking }) {
   const [activeTab, setActiveTab] = useState('rooms');
   const [profiles, setProfiles] = useState([]);
 
@@ -129,13 +129,47 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
               {bookings.length === 0 ? (
                 <div className="p-12 text-center"><Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" /><h3 className="mb-2">No Bookings Yet</h3><p className="text-muted-foreground">Bookings will appear here once guests start making reservations.</p></div>
               ) : (
-                <div className="overflow-x-auto"><table className="w-full"><thead className="bg-muted/50"><tr><th className="text-left p-4">Booking ID</th><th className="text-left p-4">Guest</th><th className="text-left p-4">Room</th><th className="text-left p-4">Check-in</th><th className="text-left p-4">Status</th></tr></thead>
-                  <tbody>{bookings.map((booking, index) => (
-                    <motion.tr key={booking.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="p-4">{booking.id}</td><td className="p-4">{booking.guest || booking.guest_name}</td><td className="p-4">{booking.room || booking.room_name}</td><td className="p-4">{booking.checkIn || booking.check_in}</td>
-                      <td className="p-4"><span className={`px-3 py-1 rounded-full text-sm ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{booking.status}</span></td>
-                    </motion.tr>
-                  ))}</tbody></table></div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-4">Booking ID</th>
+                        <th className="text-left p-4">Guest</th>
+                        <th className="text-left p-4">Room</th>
+                        <th className="text-left p-4">Check-in</th>
+                        <th className="text-left p-4">Status</th>
+                        <th className="text-left p-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bookings.map((booking, index) => (
+                        <motion.tr key={booking.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
+                          <td className="p-4 font-mono text-xs max-w-[120px] truncate" title={booking.id}>{booking.id}</td>
+                          <td className="p-4">{booking.guest || booking.guest_name}</td>
+                          <td className="p-4">{booking.room || booking.room_name}</td>
+                          <td className="p-4">{booking.checkIn || booking.check_in}</td>
+                          <td className="p-4">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                              {booking.status}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            {booking.status === 'confirmed' && onCancelBooking && (
+                              <motion.button
+                                onClick={() => onCancelBooking(booking.id)}
+                                className="bg-destructive/15 hover:bg-destructive/25 text-destructive px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                Cancel Booking
+                              </motion.button>
+                            )}
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </GlassCard>
           </motion.div>
