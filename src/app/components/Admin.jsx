@@ -260,7 +260,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
           <motion.div key="managers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <GlassCard className="p-6">
               <h3 className="mb-4">Hostel Manager Registrations</h3>
-              {profiles.filter(p => p.role === 'manager').length === 0 ? (
+              {profiles.filter(p => (p.role === 'manager' || p.role === 'manger')).length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-muted-foreground">No hostel managers registered yet</p>
@@ -276,7 +276,7 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
                       </tr>
                     </thead>
                     <tbody>
-                      {profiles.filter(p => p.role === 'manager').map((manager, index) => (
+                      {profiles.filter(p => (p.role === 'manager' || p.role === 'manger')).map((manager, index) => (
                         <motion.tr key={manager.email} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
                           <td className="p-4 font-medium">{manager.email}</td>
                           <td className="p-4">

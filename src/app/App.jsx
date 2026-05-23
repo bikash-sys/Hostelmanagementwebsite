@@ -49,7 +49,8 @@ export default function App() {
           setUserRole('admin');
         } else {
           const prof = await getProfile(u.email);
-          setUserRole(prof?.role || 'student');
+          const role = prof?.role || 'student';
+          setUserRole(role === 'manger' ? 'manager' : role);
         }
       } else {
         setUserRole('student');
@@ -65,7 +66,8 @@ export default function App() {
           setUserRole('admin');
         } else {
           const prof = await getProfile(u.email);
-          setUserRole(prof?.role || 'student');
+          const role = prof?.role || 'student';
+          setUserRole(role === 'manger' ? 'manager' : role);
         }
       } else {
         setUserRole('student');
@@ -193,7 +195,7 @@ export default function App() {
     };
   };
 
-  if (user && userRole === 'manager') {
+  if (user && (userRole === 'manager' || userRole === 'manger')) {
     return <ManagerDashboard user={user} onLogout={handleLogout} />;
   }
 
