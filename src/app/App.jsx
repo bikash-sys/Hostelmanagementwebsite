@@ -47,6 +47,8 @@ export default function App() {
       if (u) {
         if (u.email === 'bikjha2007@gmail.com') {
           setUserRole('admin');
+        } else if (u.email === 'info.dormdesk@gmail.com') {
+          setUserRole('manager');
         } else {
           const prof = await getProfile(u.email);
           const role = prof?.role || 'student';
@@ -64,6 +66,8 @@ export default function App() {
       if (u) {
         if (u.email === 'bikjha2007@gmail.com') {
           setUserRole('admin');
+        } else if (u.email === 'info.dormdesk@gmail.com') {
+          setUserRole('manager');
         } else {
           const prof = await getProfile(u.email);
           const role = prof?.role || 'student';
@@ -195,7 +199,7 @@ export default function App() {
     };
   };
 
-  if (user && (userRole === 'manager' || userRole === 'manger')) {
+  if (user && (userRole === 'manager' || userRole === 'manger' || user.email === 'info.dormdesk@gmail.com')) {
     return <ManagerDashboard user={user} onLogout={handleLogout} />;
   }
 

@@ -67,10 +67,10 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Admin Dashboard</h1>
         <div className="flex gap-2 bg-muted/50 backdrop-blur-lg rounded-xl p-1 overflow-x-auto max-w-full">
-          {['dashboard', 'bookings', 'rooms', 'complaints', 'managers'].map((tab) => (
+          {['dashboard', 'bookings', 'rooms', 'complaints'].map((tab) => (
             <motion.button key={tab} onClick={() => setActiveTab(tab)} className={`relative px-4 py-2 rounded-lg capitalize transition-colors flex-shrink-0 ${activeTab === tab ? '' : 'hover:bg-background/50'}`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               {activeTab === tab && (<motion.div layoutId="activeTab" className="absolute inset-0 bg-background shadow-lg rounded-lg" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />)}
-              <span className="relative z-10">{tab === 'managers' ? 'Hostel Managers' : tab}</span>
+              <span className="relative z-10">{tab}</span>
             </motion.button>
           ))}
         </div>
@@ -256,64 +256,6 @@ export function Admin({ rooms, bookings, complaints = [], onAddRoom, onDeleteRoo
           </motion.div>
         )}
 
-        {activeTab === 'managers' && (
-          <motion.div key="managers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <GlassCard className="p-6">
-              <h3 className="mb-4">Hostel Manager Registrations</h3>
-              {profiles.filter(p => (p.role === 'manager' || p.role === 'manger')).length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-muted-foreground">No hostel managers registered yet</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-foreground">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left p-4">Manager Email</th>
-                        <th className="text-left p-4">Status</th>
-                        <th className="text-left p-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {profiles.filter(p => (p.role === 'manager' || p.role === 'manger')).map((manager, index) => (
-                        <motion.tr key={manager.email} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="border-b border-border hover:bg-muted/30 transition-colors">
-                          <td className="p-4 font-medium">{manager.email}</td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              manager.status === 'approved' 
-                                ? 'bg-green-100 text-green-700' 
-                                : manager.status === 'pending' 
-                                ? 'bg-yellow-100 text-yellow-700 animate-pulse' 
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {manager.status}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            {manager.status === 'pending' && (
-                              <div className="flex gap-2">
-                                <button onClick={() => handleApproveManager(manager.email)} className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow">
-                                  Approve
-                                </button>
-                                <button onClick={() => handleRejectManager(manager.email)} className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow">
-                                  Reject
-                                </button>
-                              </div>
-                            )}
-                            {manager.status !== 'pending' && (
-                              <span className="text-sm text-muted-foreground">No actions available</span>
-                            )}
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </GlassCard>
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );

@@ -26,13 +26,6 @@ export function Auth({ onAuthSuccess }) {
         });
         if (error) throw error;
 
-        // Fetch profile to verify approval for managers
-        const profile = await getProfile(email);
-        if (profile && (profile.role === 'manager' || profile.role === 'manger') && profile.status !== 'approved') {
-          await supabase.auth.signOut();
-          throw new Error('Your Hostel Manager account is pending approval by the Admin.');
-        }
-        
         onAuthSuccess(data.user);
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -41,14 +34,10 @@ export function Auth({ onAuthSuccess }) {
         });
         if (error) throw error;
 
-        // Save profile with corresponding role and approval status
-        await saveProfile(email, role, (role === 'manager' || role === 'manger') ? 'pending' : 'approved');
+        // Save profile with corresponding role
+        await saveProfile(email, role, 'approved');
 
-        if (role === 'manager' || role === 'manger') {
-          setMessage('Registration successful! Your Hostel Manager account is pending Admin approval.');
-        } else {
-          setMessage('Registration successful! You can now log in.');
-        }
+        setMessage('Registration successful! You can now log in.');
         setIsLogin(true);
       }
     } catch (err) {
