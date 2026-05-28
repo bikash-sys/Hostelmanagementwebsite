@@ -170,7 +170,7 @@ export default function App() {
 
     if (!error) {
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
-      
+
       const roomName = bookingToCancel.room_name || bookingToCancel.room;
       const bookedRoom = rooms.find(r => r.name === roomName);
       if (bookedRoom) {
@@ -345,7 +345,7 @@ export default function App() {
                     </p>
                   </div>
                   <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
-                    <motion.div 
+                    <motion.div
                       className="bg-gradient-to-r from-primary to-purple-600 h-full rounded-full"
                       animate={{ x: ['-100%', '100%'] }}
                       transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
@@ -368,8 +368,8 @@ export default function App() {
                       You don't have an active room booking in our database. Book a room to access your student dashboard.
                     </p>
                   </div>
-                  <motion.button 
-                    onClick={() => setCurrentView('rooms')} 
+                  <motion.button
+                    onClick={() => setCurrentView('rooms')}
                     className="w-full bg-gradient-to-r from-primary to-purple-600 text-white py-3 rounded-xl font-semibold shadow-lg"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -424,9 +424,9 @@ export default function App() {
             <div>
               <h4 className="mb-4">Contact</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li>📍 123 Main Street, Downtown</li>
-                <li>📞 +1 (555) 123-4567</li>
-                <li>✉️ info@dormdesk.nst.edu</li>
+                <li>📍 Newton School of Technology,Mailasandra,Bengaluru</li>
+                <li>📞 +91 8100282092</li>
+                <li>✉️ info.dormdesk@gmail.com</li>
               </ul>
             </div>
           </div>
